@@ -1,10 +1,8 @@
 # Voice Calendar
 
-**Web app (default):** responsive calendar in `web/` — events stay in the browser, deploy free on **GitHub Pages**. Hebrew voice uses the **Web Speech API** (Chrome / Edge recommended).
+Browser-based calendar: month view, day list, create/edit/delete events. Data stays in **`localStorage`**. Hebrew voice input uses the **Web Speech API** (Chrome / Edge recommended).
 
-**Android:** optional Kotlin + Compose app in `app/` (local Room database).
-
-## Web app
+## Run locally
 
 ```bash
 cd web
@@ -12,85 +10,18 @@ npm install
 npm run dev
 ```
 
-Deploy: see **[GITHUB.md](GITHUB.md)** (GitHub Actions → Pages).
+## Deploy (GitHub Pages)
 
-## Android (optional)
+See **[GITHUB.md](GITHUB.md)** — enable **Settings → Pages → Source: GitHub Actions**, then push to `main` or `master`.
 
-Android app (Kotlin + Jetpack Compose) with **on-device Hebrew speech-to-text** for event descriptions.
+## Project layout
 
-## Features
+| Path | Purpose |
+|------|---------|
+| `web/` | Vite + TypeScript app (`npm run build` → `dist/`) |
 
-- Month calendar view with event indicators
-- Create, edit, and delete calendar events
-- **Web:** data in `localStorage`; **Android:** Room SQLite on device
-- Voice: **Web** — `he-IL` via browser; **Android** — `SpeechRecognizer`
-
-## Requirements (Android only)
-
-- Android 8.0+ (API 26)
-- Physical device recommended for speech
-
-## Build
-
-### GitHub Actions — web (recommended)
-
-Push to GitHub, enable **Pages → GitHub Actions**, then open  
-`https://<user>.github.io/<repo>/`.
-
-See **[GITHUB.md](GITHUB.md)**.
-
-### GitHub Actions — Android APK (optional)
-
-The **Build APK** workflow can produce `app-debug.apk`.
-
-### Local build (Android Studio)
-
-1. Install [Android Studio](https://developer.android.com/studio) with SDK 35.
-2. Open this folder in Android Studio (it will sync Gradle and create `local.properties`).
-3. Run the **app** configuration on a device or emulator.
-
-From the command line (after Android Studio generates the Gradle wrapper):
-
-```bash
-gradlew.bat assembleDebug
-```
-
-Copy `local.properties.example` to `local.properties` and set `sdk.dir` if needed.
-
-## Permissions (Android)
-
-| Permission | Purpose |
-|------------|---------|
-| `RECORD_AUDIO` | Microphone for voice transcription |
-
-The web app uses browser storage only; microphone is requested by the browser when you use voice input.
-
-## Manual testing checklist
-
-### Web
-
-1. Open the deployed site or `npm run dev` locally.
-2. Add an event, refresh the page — data should persist.
-3. Try voice in Chrome: allow microphone, speak in Hebrew, check description updates.
-
-### Android (optional)
-
-1. Create and edit events; confirm they persist after app restart.
-2. Grant microphone for voice; use a physical device for best STT.
-
-### RTL / Hebrew UI (Android)
-
-1. Set device language to Hebrew (עברית).
-2. Confirm UI strings and layout direction (RTL) look correct.
+More detail: **[web/README.md](web/README.md)**.
 
 ## Privacy
 
-- **Web:** Events stay in your browser (`localStorage`); no server in this repo.
-- **Android:** Speech recognition uses the system speech service; calendar data is local (Room).
-
-## Project structure
-
-```
-web/                 Vite + TypeScript PWA-style SPA (GitHub Pages)
-app/src/main/java/   Android (Compose) app (optional)
-```
+Events never leave your browser unless you sync the device another way; this repo does not include a backend.

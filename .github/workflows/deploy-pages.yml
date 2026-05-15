@@ -44,6 +44,11 @@ jobs:
         with:
           path: web/dist
 
+      - name: Hint if deploy fails with 404
+        run: |
+          echo "::notice::Deploy needs Pages enabled with GitHub Actions as the source."
+          echo "::notice::Open: ${{ github.server_url }}/${{ github.repository }}/settings/pages"
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5

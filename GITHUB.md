@@ -1,8 +1,8 @@
-# GitHub: web app (recommended) and optional Android APK
+# GitHub: Voice Calendar (web)
 
-The **web** calendar lives in the `web/` folder: responsive, stores events in **localStorage** in the browser, and Hebrew voice input uses the **Web Speech API** (best in Chrome / Edge).
+The app lives in **`web/`**: responsive calendar, **localStorage** for events, Hebrew voice via **Web Speech API** (best in Chrome / Edge).
 
-## Web app on GitHub Pages (free URL)
+## GitHub Pages (free URL)
 
 Your site will be:
 
@@ -10,15 +10,27 @@ Your site will be:
 
 Example: repo `voice_calendar` → `https://you.github.io/voice_calendar/`
 
-### 1. Turn on GitHub Pages (do this first)
+### 1. Turn on GitHub Pages (required — fixes “404” deploy errors)
 
-`actions/configure-pages` (and the first deploy) call the GitHub Pages API. If Pages is not set up yet, you get **Not Found** / **Get Pages site failed**.
+Until this is done, **`deploy-pages` fails** with errors like:
 
-1. Open **Settings** → **Pages** for the repository (URL ends with `/settings/pages`).
-2. Under **Build and deployment** → **Source**, select **GitHub Actions** (not “Deploy from a branch”).
-3. Save if prompted.
+- `Creating Pages deployment failed` / `HttpError: Not Found`
+- `Ensure GitHub Pages has been enabled` (link to `…/settings/pages`)
 
-You need **admin** access to the repo. On a **fork**, Pages from Actions may be disabled unless the upstream allows workflows.
+**On GitHub (you must be a repo admin):**
+
+1. Open **Settings → Pages** (`https://github.com/<owner>/<repo>/settings/pages`).
+2. Under **Build and deployment**, set **Source** to **GitHub Actions** — not “Deploy from a branch” and not “None”.
+3. Re-run the failed workflow: **Actions** → failed run → **Re-run all jobs**.
+
+| Wrong | Right |
+|--------|--------|
+| Source = *Deploy from a branch* | **GitHub Actions** |
+| Source = *None* | **GitHub Actions** |
+
+**Forks:** Some forks do not offer **GitHub Actions** under Pages; use a normal repo under your account or change org/fork policy.
+
+**Noise in logs:** `(node) DeprecationWarning: punycode` is from the runner/action stack and can be ignored.
 
 ### 2. Push this repository to GitHub
 
@@ -53,11 +65,3 @@ Build production assets:
 ```powershell
 npm run build
 ```
-
----
-
-## Optional: Android APK build
-
-The `app/` module is still an Android (Jetpack Compose) project. The **Build APK** workflow (`.github/workflows/build-apk.yml`) can produce a debug APK artifact if you keep using it.
-
-If you only care about the web app, you can ignore or delete that workflow.

@@ -109,8 +109,9 @@ function saveDraft(): void {
   const d = state.draft
   if (!d) return
   const title = d.title.trim()
-  if (!title) {
-    alert('Title is required')
+  const desc = d.description.trim()
+  if (!title && !desc) {
+    alert('Enter a title or a description')
     return
   }
   const start = fromDatetimeLocal(d.startLocal)
@@ -125,7 +126,7 @@ function saveDraft(): void {
       state.events[i] = {
         ...state.events[i]!,
         title,
-        description: d.description.trim(),
+        description: desc,
         start,
         end,
       }
@@ -134,7 +135,7 @@ function saveDraft(): void {
     state.events.push({
       id: crypto.randomUUID(),
       title,
-      description: d.description.trim(),
+      description: desc,
       start,
       end,
     })
@@ -152,7 +153,7 @@ function deleteDraft(): void {
   closeEditor()
 }
 
-function startVoice(append: boolean): void {
+function startVoice(field: 'title' | 'description', append: boolean): void {
   state.listeningStop?.()
   state.voiceStatus = 'Listening…'
   render()
@@ -167,11 +168,19 @@ function startVoice(append: boolean): void {
       if (state.draft) {
         const t = final.trim()
         if (!t) return
-        state.draft.description = append
-          ? state.draft.description
-            ? `${state.draft.description}\n${t}`
+        if (field === 'title') {
+          state.draft.title = append
+            ? state.draft.title
+              ? `${state.draft.title}\n${t}`
+              : t
             : t
-          : t
+        } else {
+          state.draft.description = append
+            ? state.draft.description
+              ? `${state.draft.description}\n${t}`
+              : t
+            : t
+        }
       }
       render()
     },
@@ -214,47 +223,56 @@ function renderEditor(): HTMLElement {
   sheet.append(h3)
 
   const titleLbl = h('label', 'lbl')
-  titleLbl.textContent = 'Title'
+  titleLbl.textContent = 'Title (optional)'
   const titleIn = document.createElement('input')
   titleIn.className = 'input'
   titleIn.type = 'text'
-  titleIn.placeholder = 'Title'
+  titleIn.placeholder = 'Short label'
   titleIn.value = d.title
   titleIn.addEventListener('input', () => {
     d.title = titleIn.value
   })
   sheet.append(titleLbl, titleIn)
 
+  const voiceTitle = h('div', 'voiceRow')
+  if (!speechAvailable()) {
+    const w = h('p', 'warn')
+    w.textContent =
+      'Voice input works best in Chrome or Edge (Chromium). Hebrew availability depends on the browser/OS.'
+    voiceTitle.append(w)
+  } else {
+    voiceTitle.append(
+      btn('Title — append (Hebrew)', 'btn secondary', () => startVoice('title', true)),
+      btn('Title — replace', 'btn secondary', () => startVoice('title', false)),
+    )
+  }
+  sheet.append(voiceTitle)
+
   const descLbl = h('label', 'lbl')
   descLbl.textContent = 'Description'
   const desc = document.createElement('textarea')
   desc.className = 'textarea'
-  desc.placeholder = 'Description'
-  desc.rows = 4
+  desc.placeholder = 'What is this event?'
+  desc.rows = 6
   desc.value = d.description
   desc.addEventListener('input', () => {
     d.description = desc.value
   })
   sheet.append(descLbl, desc)
 
-  const voiceRow = h('div', 'voiceRow')
-  if (!speechAvailable()) {
-    const w = h('p', 'warn')
-    w.textContent =
-      'Voice input works best in Chrome or Edge (Chromium). Hebrew availability depends on the browser/OS.'
-    voiceRow.append(w)
-  } else {
-    voiceRow.append(
-      btn('Speak (Hebrew) — append', 'btn secondary', () => startVoice(true)),
-      btn('Speak — replace', 'btn secondary', () => startVoice(false)),
+  const voiceDesc = h('div', 'voiceRow')
+  if (speechAvailable()) {
+    voiceDesc.append(
+      btn('Description — append (Hebrew)', 'btn secondary', () => startVoice('description', true)),
+      btn('Description — replace', 'btn secondary', () => startVoice('description', false)),
     )
   }
   if (state.voiceStatus) {
     const vs = h('p', 'voiceStatus')
     vs.textContent = state.voiceStatus
-    voiceRow.append(vs)
+    voiceDesc.append(vs)
   }
-  sheet.append(voiceRow)
+  sheet.append(voiceDesc)
 
   const sLbl = h('label', 'lbl')
   sLbl.textContent = 'Start'
@@ -373,16 +391,11 @@ function render(): void {
     const list = h('div', 'evList')
     for (const ev of dayEvents) {
       const card = btn('', 'evCard', () => openEdit(ev))
-      const t = h('div', 'evTitle')
-      t.textContent = ev.title || 'Event'
+      const body = h('div', 'evTitle')
+      body.textContent = ev.title.trim() || ev.description.trim() || 'No details'
       const time = h('div', 'evTime')
       time.textContent = `${formatHm(ev.start)} – ${formatHm(ev.end)}`
-      card.append(t, time)
-      if (ev.description) {
-        const desc = h('div', 'evDesc')
-        desc.textContent = ev.description
-        card.append(desc)
-      }
+      card.append(body, time)
       list.append(card)
     }
     shell.append(list)
