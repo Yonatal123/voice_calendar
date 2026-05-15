@@ -1,0 +1,22 @@
+*.iml
+.gradle
+/local.properties
+local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.ap_
+*.aab
+output/
+
+# Cursor IDE metadata (not part of the Android app)
+agent-transcripts/
+agent-tools/
+mcps/
+terminals/
+.cursor/
+build-check.txt

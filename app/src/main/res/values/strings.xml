@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Calendar</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Welcome to Voice Calendar</string>
+    <string name="onboarding_calendar_desc">This app reads and writes events on your Google Calendar synced to this device.</string>
+    <string name="onboarding_grant_calendar">Grant calendar access</string>
+    <string name="onboarding_calendar_denied">Calendar permission is required to use this app.</string>
+    <string name="onboarding_open_settings">Open settings</string>
+
+    <!-- Calendar -->
+    <string name="calendar_today">Today</string>
+    <string name="calendar_no_events">No events on this day</string>
+    <string name="calendar_add_event">Add event</string>
+    <string name="calendar_no_calendars">No writable calendar found. Add a Google account in device settings.</string>
+    <string name="calendar_loading">Loading…</string>
+    <string name="calendar_error">Could not load calendar</string>
+
+    <!-- Event editor -->
+    <string name="event_new">New event</string>
+    <string name="event_edit">Edit event</string>
+    <string name="event_title">Title</string>
+    <string name="event_description">Description</string>
+    <string name="event_start">Start</string>
+    <string name="event_end">End</string>
+    <string name="event_save">Save</string>
+    <string name="event_delete">Delete</string>
+    <string name="event_cancel">Cancel</string>
+    <string name="event_delete_confirm">Delete this event?</string>
+    <string name="event_saved">Event saved</string>
+    <string name="event_deleted">Event deleted</string>
+    <string name="event_error">Could not save event</string>
+    <string name="event_title_required">Title is required</string>
+
+    <!-- Voice -->
+    <string name="voice_start">Tap to speak (Hebrew)</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_processing">Processing…</string>
+    <string name="voice_prompt">Speak your event details in Hebrew</string>
+    <string name="voice_hebrew_unavailable">Hebrew speech recognition is not available on this device. Install or update Google app and speech services.</string>
+    <string name="voice_error">Speech recognition failed</string>
+    <string name="voice_permission_denied">Microphone permission is required for voice input.</string>
+    <string name="voice_append">Append to description</string>
+    <string name="voice_replace">Replace description</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="retry">Retry</string>
+</resources>
