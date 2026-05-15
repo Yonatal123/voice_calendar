@@ -318,7 +318,11 @@ private fun EventListItem(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = event.title.ifBlank { stringResource(R.string.event_title) },
+                text = if (event.title.isBlank()) {
+                    stringResource(R.string.event_title)
+                } else {
+                    event.title
+                },
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
