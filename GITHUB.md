@@ -1,56 +1,55 @@
-# Push to GitHub and download the APK
+# GitHub: web app (recommended) and optional Android APK
 
-## 1. Create a GitHub repository
+The **web** calendar lives in the `web/` folder: responsive, stores events in **localStorage** in the browser, and Hebrew voice input uses the **Web Speech API** (best in Chrome / Edge).
 
-1. Go to https://github.com/new
-2. Name it (e.g. `voice-calendar`)
-3. Choose **Public** or **Private**
-4. Do **not** add a README, .gitignore, or license (this project already has them)
-5. Click **Create repository**
+## Web app on GitHub Pages (free URL)
 
-## 2. Push this project from your PC
+Your site will be:
 
-Open PowerShell in the project folder:
+`https://<your-username>.github.io/<repository-name>/`
+
+Example: repo `voice_calendar` → `https://you.github.io/voice_calendar/`
+
+### 1. Push this repository to GitHub
 
 ```powershell
-cd C:\Users\taly2\.cursor\projects\empty-window
-
-git init
-git add .
-git commit -m "Initial commit: Voice Calendar Android app"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/voice-calendar.git
+cd C:\voice_calendar
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git push -u origin main
 ```
 
-Replace `YOUR_USERNAME/voice-calendar` with your repo URL.
+### 2. Turn on GitHub Pages (first time only)
 
-If Git asks you to sign in, use a **Personal Access Token** (not your password):
-https://github.com/settings/tokens → Generate new token (classic) → scope `repo`.
+1. Repo → **Settings** → **Pages**
+2. Under **Build and deployment** → **Source**: choose **GitHub Actions** (not “Deploy from a branch”).
 
-## 3. Wait for the build
+### 3. Deploy
 
-1. Open your repo on GitHub
-2. Go to the **Actions** tab
-3. Open the **Build APK** workflow run (starts automatically on push)
-4. Wait until it shows a green checkmark (~5–10 minutes the first time)
+- Every push to `main` or `master` runs **Deploy web to GitHub Pages** (see `.github/workflows/deploy-pages.yml`).
+- After a green run, open the URL above. The workflow job summary may also show **page_url**.
 
-## 4. Download the APK
+**Custom domain (optional, still free with GitHub Pages):** same Settings → Pages → **Custom domain**. DNS must point to GitHub as [documented](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
 
-1. In the completed workflow run, scroll to **Artifacts**
-2. Click **voice-calendar-debug-apk** to download a ZIP
-3. Unzip it — inside is `app-debug.apk`
-4. Copy `app-debug.apk` to your phone and install (allow installs from Files/Drive if prompted)
+**If your repo is `username.github.io`:** the site is served from the site root. Set repository variable `VITE_BASE_PATH` to `/` in **Settings → Secrets and variables → Actions → Variables**, or adjust the workflow env (default uses `/<repo>/`).
 
-## Run the build manually
+### 4. Local web development
 
-Actions → **Build APK** → **Run workflow** → **Run workflow**
+```powershell
+cd web
+npm install
+npm run dev
+```
 
-## Troubleshooting
+Build production assets:
 
-| Problem | Fix |
-|---------|-----|
-| Build fails on licenses | Re-run the workflow; the workflow accepts licenses automatically |
-| No Artifacts section | Open the workflow **job** (not the workflow list); artifacts are on the job summary page |
-| `git` not found | Install Git: https://git-scm.com/download/win |
-| Push rejected | If the remote has a README, use `git pull origin main --rebase` then push again |
+```powershell
+npm run build
+```
+
+---
+
+## Optional: Android APK build
+
+The `app/` module is still an Android (Jetpack Compose) project. The **Build APK** workflow (`.github/workflows/build-apk.yml`) can produce a debug APK artifact if you keep using it.
+
+If you only care about the web app, you can ignore or delete that workflow.

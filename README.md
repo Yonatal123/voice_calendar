@@ -1,27 +1,47 @@
 # Voice Calendar
 
-Android app (Kotlin + Jetpack Compose) that manages Google Calendar events synced on your device, with **on-device Hebrew speech-to-text** for event descriptions.
+**Web app (default):** responsive calendar in `web/` — events stay in the browser, deploy free on **GitHub Pages**. Hebrew voice uses the **Web Speech API** (Chrome / Edge recommended).
+
+**Android:** optional Kotlin + Compose app in `app/` (local Room database).
+
+## Web app
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Deploy: see **[GITHUB.md](GITHUB.md)** (GitHub Actions → Pages).
+
+## Android (optional)
+
+Android app (Kotlin + Jetpack Compose) with **on-device Hebrew speech-to-text** for event descriptions.
 
 ## Features
 
 - Month calendar view with event indicators
 - Create, edit, and delete calendar events
-- Events sync via the Android Calendar Provider to Google Calendar
-- Voice input in Hebrew (`he-IL` / `iw-IL`) using `SpeechRecognizer`
+- **Web:** data in `localStorage`; **Android:** Room SQLite on device
+- Voice: **Web** — `he-IL` via browser; **Android** — `SpeechRecognizer`
 
-## Requirements
+## Requirements (Android only)
 
 - Android 8.0+ (API 26)
-- Google account with calendar sync on the device
-- Google app and speech services for Hebrew recognition (physical device recommended)
+- Physical device recommended for speech
 
 ## Build
 
-### GitHub Actions (no Android Studio required)
+### GitHub Actions — web (recommended)
 
-Push this repo to GitHub; the **Build APK** workflow produces a downloadable `app-debug.apk`.
+Push to GitHub, enable **Pages → GitHub Actions**, then open  
+`https://<user>.github.io/<repo>/`.
 
-See **[GITHUB.md](GITHUB.md)** for step-by-step push and download instructions.
+See **[GITHUB.md](GITHUB.md)**.
+
+### GitHub Actions — Android APK (optional)
+
+The **Build APK** workflow can produce `app-debug.apk`.
 
 ### Local build (Android Studio)
 
@@ -37,48 +57,40 @@ gradlew.bat assembleDebug
 
 Copy `local.properties.example` to `local.properties` and set `sdk.dir` if needed.
 
-## Permissions
+## Permissions (Android)
 
 | Permission | Purpose |
 |------------|---------|
-| `READ_CALENDAR` / `WRITE_CALENDAR` | Read and manage synced calendar events |
 | `RECORD_AUDIO` | Microphone for voice transcription |
+
+The web app uses browser storage only; microphone is requested by the browser when you use voice input.
 
 ## Manual testing checklist
 
-### Calendar sync
+### Web
 
-1. Ensure a Google account is signed in and Calendar sync is enabled.
-2. Grant calendar permissions on first launch.
-3. Create an event with title and description.
-4. Open the Google Calendar app and confirm the event appears.
-5. Edit the event in Voice Calendar and verify the change in Google Calendar.
-6. Delete the event and confirm removal in Google Calendar.
+1. Open the deployed site or `npm run dev` locally.
+2. Add an event, refresh the page — data should persist.
+3. Try voice in Chrome: allow microphone, speak in Hebrew, check description updates.
 
-### Hebrew voice input
+### Android (optional)
 
-1. Use a **physical device** (emulator STT is unreliable).
-2. Install/update the Google app and Hebrew speech recognition data.
-3. Create or edit an event, grant microphone permission, tap the mic.
-4. Speak in Hebrew; partial text should appear, then fill the description on completion.
-5. Save the event and verify the description in Google Calendar.
+1. Create and edit events; confirm they persist after app restart.
+2. Grant microphone for voice; use a physical device for best STT.
 
-### RTL / Hebrew UI
+### RTL / Hebrew UI (Android)
 
 1. Set device language to Hebrew (עברית).
 2. Confirm UI strings and layout direction (RTL) look correct.
 
 ## Privacy
 
-- Calendar data is read/written only through the system Calendar Provider.
-- Speech recognition runs on-device via the system speech service; no custom backend is included.
+- **Web:** Events stay in your browser (`localStorage`); no server in this repo.
+- **Android:** Speech recognition uses the system speech service; calendar data is local (Room).
 
 ## Project structure
 
 ```
-app/src/main/java/com/voicecalendar/app/
-├── data/           CalendarRepository, SpeechRecognitionRepository
-├── domain/model/   CalendarEvent, EventDraft
-├── ui/             Compose screens and ViewModels
-└── navigation/     AppNavHost
+web/                 Vite + TypeScript PWA-style SPA (GitHub Pages)
+app/src/main/java/   Android (Compose) app (optional)
 ```
