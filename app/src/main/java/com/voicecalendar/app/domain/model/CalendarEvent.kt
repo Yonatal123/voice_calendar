@@ -9,7 +9,6 @@ data class CalendarEvent(
     val description: String,
     val start: LocalDateTime,
     val end: LocalDateTime,
-    val calendarId: Long,
 )
 
 data class EventDraft(

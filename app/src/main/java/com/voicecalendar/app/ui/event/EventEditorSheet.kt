@@ -55,7 +55,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventEditorSheet(
-    calendarId: Long?,
     selectedDate: LocalDate,
     existingEvent: CalendarEvent?,
     onDismiss: () -> Unit,
@@ -77,8 +76,7 @@ fun EventEditorSheet(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> micGranted = granted }
 
-    LaunchedEffect(calendarId, selectedDate, existingEvent) {
-        calendarId?.let { viewModel.setCalendarId(it) }
+    LaunchedEffect(selectedDate, existingEvent) {
         if (existingEvent != null) {
             viewModel.initForEdit(existingEvent)
         } else {
@@ -192,14 +190,10 @@ fun EventEditorSheet(
                 formatter = dateTimeFormatter,
             )
 
-            uiState.errorMessage?.let { error ->
+            uiState.errorMessage?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (error == "no_calendar") {
-                        stringResource(R.string.calendar_no_calendars)
-                    } else {
-                        stringResource(R.string.event_error)
-                    },
+                    text = stringResource(R.string.event_error),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )

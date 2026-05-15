@@ -22,8 +22,6 @@ data class CalendarUiState(
     val datesWithEvents: Set<LocalDate> = emptySet(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val calendarId: Long? = null,
-    val noCalendarAvailable: Boolean = false,
 )
 
 @HiltViewModel
@@ -35,18 +33,7 @@ class CalendarViewModel @Inject constructor(
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            val calendarId = calendarRepository.getWritableCalendarId()
-            _uiState.update {
-                it.copy(
-                    calendarId = calendarId,
-                    noCalendarAvailable = calendarId == null,
-                )
-            }
-            if (calendarId != null) {
-                loadMonth(_uiState.value.currentMonth)
-            }
-        }
+        loadMonth(_uiState.value.currentMonth)
     }
 
     fun selectDate(date: LocalDate) {

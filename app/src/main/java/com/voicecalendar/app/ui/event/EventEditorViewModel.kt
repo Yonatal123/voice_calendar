@@ -30,12 +30,6 @@ class EventEditorViewModel @Inject constructor(
     private val calendarRepository: CalendarRepository,
 ) : ViewModel() {
 
-    private var calendarId: Long? = null
-
-    fun setCalendarId(id: Long) {
-        calendarId = id
-    }
-
     private val _uiState = MutableStateFlow(EventEditorUiState())
     val uiState: StateFlow<EventEditorUiState> = _uiState.asStateFlow()
 
@@ -105,17 +99,12 @@ class EventEditorViewModel @Inject constructor(
             _uiState.update { it.copy(titleError = "required") }
             return
         }
-        val calId = calendarId
-        if (calId == null && !draft.id.isEdit()) {
-            _uiState.update { it.copy(errorMessage = "no_calendar") }
-            return
-        }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             val result = if (draft.id != null) {
                 calendarRepository.updateEvent(draft)
             } else {
-                calendarRepository.createEvent(draft, calId!!).map { }
+                calendarRepository.createEvent(draft).map { }
             }
             result.fold(
                 onSuccess = {
@@ -154,6 +143,4 @@ class EventEditorViewModel @Inject constructor(
     fun consumeDeleted() {
         _uiState.update { it.copy(deleted = false) }
     }
-
-    private fun Long?.isEdit(): Boolean = this != null
 }

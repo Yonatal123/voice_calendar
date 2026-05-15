@@ -2,16 +2,9 @@
 <resources>
     <string name="app_name">יומן קולי</string>
 
-    <string name="onboarding_title">ברוכים הבאים ליומן קולי</string>
-    <string name="onboarding_calendar_desc">האפליקציה קוראת וכותבת אירועים ביומן Google המסונכרן במכשיר.</string>
-    <string name="onboarding_grant_calendar">אישור גישה ליומן</string>
-    <string name="onboarding_calendar_denied">נדרשת הרשאת יומן לשימוש באפליקציה.</string>
-    <string name="onboarding_open_settings">פתיחת הגדרות</string>
-
     <string name="calendar_today">היום</string>
     <string name="calendar_no_events">אין אירועים ביום זה</string>
     <string name="calendar_add_event">הוספת אירוע</string>
-    <string name="calendar_no_calendars">לא נמצא יומן לכתיבה. הוסיפו חשבון Google בהגדרות המכשיר.</string>
     <string name="calendar_loading">טוען…</string>
     <string name="calendar_error">לא ניתן לטעון את היומן</string>
 

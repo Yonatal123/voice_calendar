@@ -2,18 +2,10 @@
 <resources>
     <string name="app_name">Voice Calendar</string>
 
-    <!-- Onboarding -->
-    <string name="onboarding_title">Welcome to Voice Calendar</string>
-    <string name="onboarding_calendar_desc">This app reads and writes events on your Google Calendar synced to this device.</string>
-    <string name="onboarding_grant_calendar">Grant calendar access</string>
-    <string name="onboarding_calendar_denied">Calendar permission is required to use this app.</string>
-    <string name="onboarding_open_settings">Open settings</string>
-
     <!-- Calendar -->
     <string name="calendar_today">Today</string>
     <string name="calendar_no_events">No events on this day</string>
     <string name="calendar_add_event">Add event</string>
-    <string name="calendar_no_calendars">No writable calendar found. Add a Google account in device settings.</string>
     <string name="calendar_loading">Loading…</string>
     <string name="calendar_error">Could not load calendar</string>
 

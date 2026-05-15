@@ -112,15 +112,13 @@ fun CalendarScreen(
             )
         },
         floatingActionButton = {
-            if (!uiState.noCalendarAvailable) {
-                FloatingActionButton(
-                    onClick = {
-                        editingEvent = null
-                        showEditor = true
-                    },
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_add_event))
-                }
+            FloatingActionButton(
+                onClick = {
+                    editingEvent = null
+                    showEditor = true
+                },
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_add_event))
             }
         },
     ) { padding ->
@@ -134,22 +132,6 @@ fun CalendarScreen(
                 onPrevious = viewModel::previousMonth,
                 onNext = viewModel::nextMonth,
             )
-
-            if (uiState.noCalendarAvailable) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.calendar_no_calendars),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                return@Column
-            }
 
             if (uiState.isLoading) {
                 Box(
@@ -215,9 +197,8 @@ fun CalendarScreen(
         }
     }
 
-    if (showEditor && uiState.calendarId != null) {
+    if (showEditor) {
         EventEditorSheet(
-            calendarId = uiState.calendarId,
             selectedDate = uiState.selectedDate,
             existingEvent = editingEvent,
             onDismiss = {
