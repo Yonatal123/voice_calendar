@@ -9,12 +9,7 @@ import androidx.room.Update
 @Dao
 interface EventDao {
     @Query(
-        """
-        SELECT * FROM events
-        WHERE startEpochMilli < :rangeEndExclusive
-        AND endEpochMilli > :rangeStartInclusive
-        ORDER BY startEpochMilli ASC
-        """,
+        "SELECT * FROM events WHERE startEpochMilli < :rangeEndExclusive AND endEpochMilli > :rangeStartInclusive ORDER BY startEpochMilli ASC",
     )
     suspend fun getEventsOverlappingRange(
         rangeStartInclusive: Long,
