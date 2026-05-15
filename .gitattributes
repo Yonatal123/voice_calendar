@@ -1,0 +1,2 @@
+# Unix wrapper must use LF so CI (Linux) can execute it
+gradlew text eol=lf
