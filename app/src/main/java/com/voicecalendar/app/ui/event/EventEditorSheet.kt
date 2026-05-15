@@ -190,7 +190,7 @@ fun EventEditorSheet(
                 formatter = dateTimeFormatter,
             )
 
-            uiState.errorMessage?.let {
+            if (uiState.errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.event_error),
