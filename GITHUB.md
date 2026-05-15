@@ -1,6 +1,6 @@
 # GitHub: Voice Calendar (web)
 
-The app lives in **`web/`**: responsive calendar, **localStorage** for events, Hebrew voice via **Web Speech API** (best in Chrome / Edge).
+The app lives in **`web/`**: responsive calendar, **Supabase (PostgreSQL)** for events after you sign in with email, Hebrew voice via **Web Speech API** (best in Chrome / Edge). See **[SUPABASE.md](./SUPABASE.md)** for database setup and **[web/README.md](./web/README.md)** for local env.
 
 ## GitHub Pages (free URL)
 
@@ -40,7 +40,18 @@ git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git push -u origin main
 ```
 
-### 3. Deploy
+### 3. Supabase secrets (required for a working calendar)
+
+Add two **Actions secrets** (repo **Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|--------|--------|
+| `VITE_SUPABASE_URL` | Supabase **Project URL** |
+| `VITE_SUPABASE_ANON_KEY` | Supabase **anon public** key |
+
+Then re-run the deploy workflow so the next build embeds them. Without these, the site only shows setup instructions.
+
+### 4. Deploy
 
 - Every push to `main` or `master` runs **Deploy web to GitHub Pages** (`.github/workflows/deploy-pages.yml`).
 - After a green run, open the URL above. The job summary may show **page_url**.
@@ -52,7 +63,7 @@ git push -u origin main
 
 **If your repo is `username.github.io`:** the site is served from the site root. Add a repository variable `VITE_BASE_PATH` = `/` under **Settings → Secrets and variables → Actions → Variables**, or change the workflow `env` (defaults to `/<repo>/`).
 
-### 4. Local web development
+### 5. Local web development
 
 ```powershell
 cd web

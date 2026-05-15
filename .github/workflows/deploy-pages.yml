@@ -35,6 +35,8 @@ jobs:
         working-directory: web
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm run build

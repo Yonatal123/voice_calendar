@@ -1,5 +1,8 @@
+import type { Session } from '@supabase/supabase-js'
 import type { CalendarEvent } from './types'
-import { loadEvents, saveEvents } from './storage'
+import { readBrowserStoredEventsForImport } from './storage'
+import { fetchRemoteEvents, upsertRemoteEvent, deleteRemoteEvent } from './remote-events'
+import { getSupabase, isRemoteConfigured } from './supabase'
 import {
   calendarCells,
   endOfDay,
@@ -20,10 +23,14 @@ type Draft = {
   endLocal: string
 }
 
+type AppPhase = 'loading' | 'unconfigured' | 'auth' | 'app'
+
 const state = {
+  phase: 'loading' as AppPhase,
+  session: null as Session | null,
   viewMonth: startOfMonth(new Date()),
   selected: stripTime(new Date()),
-  events: loadEvents() as CalendarEvent[],
+  events: [] as CalendarEvent[],
   editorOpen: false,
   draft: null as Draft | null,
   listeningStop: null as null | (() => void),
@@ -62,8 +69,9 @@ function eventsForDay(day: Date): CalendarEvent[] {
     .sort((x, y) => new Date(x.start).getTime() - new Date(y.start).getTime())
 }
 
-function persist(): void {
-  saveEvents(state.events)
+async function refreshRemoteEvents(): Promise<void> {
+  const sb = getSupabase()
+  state.events = await fetchRemoteEvents(sb)
 }
 
 function openCreate(): void {
@@ -105,7 +113,7 @@ function closeEditor(): void {
   render()
 }
 
-function saveDraft(): void {
+async function saveDraft(): Promise<void> {
   const d = state.draft
   if (!d) return
   const title = d.title.trim()
@@ -120,37 +128,112 @@ function saveDraft(): void {
     alert('End must be after start')
     return
   }
+
+  let saved: CalendarEvent
   if (d.id) {
     const i = state.events.findIndex((e) => e.id === d.id)
-    if (i >= 0) {
-      state.events[i] = {
-        ...state.events[i]!,
-        title,
-        description: desc,
-        start,
-        end,
-      }
+    if (i < 0) return
+    saved = {
+      ...state.events[i]!,
+      title,
+      description: desc,
+      start,
+      end,
     }
+    state.events[i] = saved
   } else {
-    state.events.push({
+    saved = {
       id: crypto.randomUUID(),
       title,
       description: desc,
       start,
       end,
-    })
+    }
+    state.events.push(saved)
   }
-  persist()
+
+  const uid = state.session?.user?.id
+  if (!uid) {
+    alert('Not signed in.')
+    return
+  }
+  try {
+    await upsertRemoteEvent(getSupabase(), uid, saved)
+  } catch (e) {
+    try {
+      await refreshRemoteEvents()
+    } catch {
+      /* ignore */
+    }
+    alert(e instanceof Error ? e.message : 'Could not save to the server.')
+    return
+  }
   closeEditor()
 }
 
-function deleteDraft(): void {
+async function deleteDraft(): Promise<void> {
   const d = state.draft
   if (!d?.id) return
   if (!confirm('Delete this event?')) return
-  state.events = state.events.filter((e) => e.id !== d.id)
-  persist()
+  const id = d.id
+  state.events = state.events.filter((e) => e.id !== id)
+  try {
+    await deleteRemoteEvent(getSupabase(), id)
+  } catch (e) {
+    try {
+      await refreshRemoteEvents()
+    } catch {
+      /* ignore */
+    }
+    alert(e instanceof Error ? e.message : 'Could not delete on the server.')
+    return
+  }
   closeEditor()
+}
+
+async function signOut(): Promise<void> {
+  await getSupabase().auth.signOut()
+}
+
+async function sendMagicLink(emailRaw: string): Promise<void> {
+  const email = emailRaw.trim()
+  if (!email) {
+    alert('Enter your email.')
+    return
+  }
+  const base = import.meta.env.BASE_URL || '/'
+  const redirectTo = new URL(base, window.location.origin).href
+  const { error } = await getSupabase().auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
+  })
+  if (error) {
+    alert(error.message)
+    return
+  }
+  alert('Check your email for the login link.')
+}
+
+async function importFromBrowser(): Promise<void> {
+  const uid = state.session?.user?.id
+  if (!uid) return
+  const local = await readBrowserStoredEventsForImport()
+  if (local.length === 0) {
+    alert('No events found in this browser storage.')
+    return
+  }
+  if (!confirm(`Upload ${local.length} event(s) from this browser to your account?`)) return
+  const sb = getSupabase()
+  try {
+    for (const ev of local) {
+      await upsertRemoteEvent(sb, uid, ev)
+    }
+    await refreshRemoteEvents()
+    render()
+    alert('Import finished.')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'Import failed.')
+  }
 }
 
 function startVoice(field: 'title' | 'description', append: boolean): void {
@@ -298,8 +381,8 @@ function renderEditor(): HTMLElement {
 
   const actions = h('div', 'actions')
   actions.append(btn('Cancel', 'btn ghost', () => closeEditor()))
-  if (d.id) actions.append(btn('Delete', 'btn danger', () => deleteDraft()))
-  actions.append(btn('Save', 'btn primary', () => saveDraft()))
+  if (d.id) actions.append(btn('Delete', 'btn danger', () => void deleteDraft()))
+  actions.append(btn('Save', 'btn primary', () => void saveDraft()))
   sheet.append(actions)
 
   backdrop.addEventListener('click', (e) => {
@@ -309,15 +392,55 @@ function renderEditor(): HTMLElement {
   return backdrop
 }
 
-function render(): void {
-  const app = document.getElementById('app')
-  if (!app) return
-  app.innerHTML = ''
+function renderUnconfigured(root: HTMLElement): void {
+  const wrap = h('div', 'authCard')
+  const t = h('h1', 'authTitle')
+  t.textContent = 'Voice Calendar'
+  const p = h('p', 'authBlurb')
+  p.textContent =
+    'Cloud database is not configured. Add Supabase URL and anon key at build time (see SUPABASE.md in the repository), or use .env.local for local dev.'
+  wrap.append(t, p)
+  root.append(wrap)
+}
 
+function renderAuth(root: HTMLElement): void {
+  const wrap = h('div', 'authCard')
+  const t = h('h1', 'authTitle')
+  t.textContent = 'Voice Calendar'
+  const p = h('p', 'authBlurb')
+  p.textContent = 'Sign in with your email. We send a magic link — no password to remember.'
+  const email = document.createElement('input')
+  email.type = 'email'
+  email.className = 'input authInput'
+  email.placeholder = 'you@example.com'
+  email.autocomplete = 'email'
+  const row = h('div', 'authRow')
+  row.append(
+    btn('Send magic link', 'btn primary', () => {
+      void sendMagicLink(email.value)
+    }),
+  )
+  wrap.append(t, p, email, row)
+  root.append(wrap)
+}
+
+function renderCalendarApp(root: HTMLElement): void {
   const shell = h('div', 'shell')
   const header = h('header', 'top')
+  const titleRow = h('div', 'titleRow')
   const title = h('h1', 'title')
   title.textContent = 'Voice Calendar'
+  titleRow.append(title)
+  const who = h('span', 'signedInAs')
+  const em = state.session?.user?.email ?? 'Signed in'
+  who.textContent = em
+  titleRow.append(who)
+  const out = btn('Sign out', 'btn ghost smallBtn', () => void signOut())
+  titleRow.append(out)
+  const imp = btn('Import from this browser', 'btn secondary smallBtn', () => void importFromBrowser())
+  titleRow.append(imp)
+  header.append(titleRow)
+
   const monthNav = h('div', 'monthNav')
   monthNav.append(
     btn('‹', 'iconBtn', () => {
@@ -334,7 +457,7 @@ function render(): void {
       render()
     }),
   )
-  header.append(title, monthNav)
+  header.append(monthNav)
   shell.append(header)
 
   const todayBtn = btn('Today', 'todayBtn', () => {
@@ -409,9 +532,84 @@ function render(): void {
     shell.append(renderEditor())
   }
 
-  app.append(shell)
+  root.append(shell)
 }
 
-export function init(): void {
+function renderLoading(root: HTMLElement): void {
+  const wrap = h('div', 'authCard')
+  const p = h('p', 'authBlurb')
+  p.textContent = 'Loading…'
+  root.append(wrap)
+}
+
+function render(): void {
+  const app = document.getElementById('app')
+  if (!app) return
+  app.innerHTML = ''
+
+  if (state.phase === 'unconfigured') {
+    renderUnconfigured(app)
+    return
+  }
+  if (state.phase === 'loading') {
+    renderLoading(app)
+    return
+  }
+  if (state.phase === 'auth') {
+    renderAuth(app)
+    return
+  }
+  renderCalendarApp(app)
+}
+
+export async function init(): Promise<void> {
+  if (!isRemoteConfigured()) {
+    state.phase = 'unconfigured'
+    render()
+    return
+  }
+
+  state.phase = 'loading'
   render()
+
+  const sb = getSupabase()
+
+  const { data: sessionData } = await sb.auth.getSession()
+  state.session = sessionData.session
+  if (state.session) {
+    try {
+      state.events = await fetchRemoteEvents(sb)
+    } catch {
+      state.events = []
+    }
+    state.phase = 'app'
+  } else {
+    state.phase = 'auth'
+  }
+  render()
+
+  sb.auth.onAuthStateChange(async (event, sess) => {
+    if (event === 'INITIAL_SESSION') return
+
+    state.session = sess
+
+    if (event === 'SIGNED_OUT') {
+      state.events = []
+      state.editorOpen = false
+      state.draft = null
+      state.phase = 'auth'
+      render()
+      return
+    }
+
+    if (event === 'SIGNED_IN') {
+      try {
+        state.events = await fetchRemoteEvents(sb)
+      } catch {
+        state.events = []
+      }
+      state.phase = 'app'
+      render()
+    }
+  })
 }

@@ -11,3 +11,4 @@ build-check.txt
 # Web (Vite)
 web/node_modules/
 web/dist/
+web/.env.local
