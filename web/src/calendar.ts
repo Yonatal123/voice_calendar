@@ -39,11 +39,11 @@ export function endOfDay(d: Date): Date {
 }
 
 export function monthTitle(d: Date): string {
-  return d.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+  return d.toLocaleString('he-IL', { month: 'long', year: 'numeric' })
 }
 
 export function formatDayHeader(d: Date): string {
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString('he-IL', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

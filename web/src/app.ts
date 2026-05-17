@@ -1,6 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
 import type { CalendarEvent } from './types'
-import { readBrowserStoredEventsForImport } from './storage'
 import { fetchRemoteEvents, upsertRemoteEvent, deleteRemoteEvent } from './remote-events'
 import { getSupabase, isRemoteConfigured } from './supabase'
 import {
@@ -13,7 +12,10 @@ import {
 } from './calendar'
 import { listenHebrew, speechAvailable } from './speech'
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
+
+const MIC_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 18.93V21h2v-2.07A8.001 8.001 0 0 0 20 11h-2a6 6 0 0 1-12 0H4a8.001 8.001 0 0 0 7 7.93z"/></svg>'
 
 type Draft = {
   id?: string
@@ -119,13 +121,13 @@ async function saveDraft(): Promise<void> {
   const title = d.title.trim()
   const desc = d.description.trim()
   if (!title && !desc) {
-    alert('Enter a title or a description')
+    alert('הזן כותרת או תיאור')
     return
   }
   const start = fromDatetimeLocal(d.startLocal)
   const end = fromDatetimeLocal(d.endLocal)
   if (new Date(end) < new Date(start)) {
-    alert('End must be after start')
+    alert('שעת הסיום חייבת להיות אחרי שעת ההתחלה')
     return
   }
 
@@ -154,7 +156,7 @@ async function saveDraft(): Promise<void> {
 
   const uid = state.session?.user?.id
   if (!uid) {
-    alert('Not signed in.')
+    alert('לא מחובר.')
     return
   }
   try {
@@ -165,7 +167,7 @@ async function saveDraft(): Promise<void> {
     } catch {
       /* ignore */
     }
-    alert(e instanceof Error ? e.message : 'Could not save to the server.')
+    alert(e instanceof Error ? e.message : 'לא ניתן לשמור בשרת.')
     return
   }
   closeEditor()
@@ -174,7 +176,7 @@ async function saveDraft(): Promise<void> {
 async function deleteDraft(): Promise<void> {
   const d = state.draft
   if (!d?.id) return
-  if (!confirm('Delete this event?')) return
+  if (!confirm('למחוק את האירוע?')) return
   const id = d.id
   state.events = state.events.filter((e) => e.id !== id)
   try {
@@ -185,7 +187,7 @@ async function deleteDraft(): Promise<void> {
     } catch {
       /* ignore */
     }
-    alert(e instanceof Error ? e.message : 'Could not delete on the server.')
+    alert(e instanceof Error ? e.message : 'לא ניתן למחוק בשרת.')
     return
   }
   closeEditor()
@@ -198,7 +200,7 @@ async function signOut(): Promise<void> {
 async function sendMagicLink(emailRaw: string): Promise<void> {
   const email = emailRaw.trim()
   if (!email) {
-    alert('Enter your email.')
+    alert('הזן את כתובת האימייל.')
     return
   }
   const base = import.meta.env.BASE_URL || '/'
@@ -211,38 +213,16 @@ async function sendMagicLink(emailRaw: string): Promise<void> {
     alert(error.message)
     return
   }
-  alert('Check your email for the login link.')
-}
-
-async function importFromBrowser(): Promise<void> {
-  const uid = state.session?.user?.id
-  if (!uid) return
-  const local = await readBrowserStoredEventsForImport()
-  if (local.length === 0) {
-    alert('No events found in this browser storage.')
-    return
-  }
-  if (!confirm(`Upload ${local.length} event(s) from this browser to your account?`)) return
-  const sb = getSupabase()
-  try {
-    for (const ev of local) {
-      await upsertRemoteEvent(sb, uid, ev)
-    }
-    await refreshRemoteEvents()
-    render()
-    alert('Import finished.')
-  } catch (e) {
-    alert(e instanceof Error ? e.message : 'Import failed.')
-  }
+  alert('בדוק את האימייל לקישור ההתחברות.')
 }
 
 function startVoice(field: 'title' | 'description', append: boolean): void {
   state.listeningStop?.()
-  state.voiceStatus = 'Listening…'
+  state.voiceStatus = 'מאזין…'
   render()
   state.listeningStop = listenHebrew(
     (partial) => {
-      state.voiceStatus = partial || 'Listening…'
+      state.voiceStatus = partial || 'מאזין…'
       render()
     },
     (final) => {
@@ -290,9 +270,14 @@ function btn(label: string, cls: string | undefined, onClick: () => void): HTMLB
   return b
 }
 
-function formatHm(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+function micBtn(ariaLabel: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement('button')
+  b.type = 'button'
+  b.className = 'btn micBtn'
+  b.setAttribute('aria-label', ariaLabel)
+  b.innerHTML = MIC_SVG
+  b.addEventListener('click', onClick)
+  return b
 }
 
 function renderEditor(): HTMLElement {
@@ -302,87 +287,60 @@ function renderEditor(): HTMLElement {
   sheet.setAttribute('role', 'dialog')
 
   const h3 = h('h3', 'sheetTitle')
-  h3.textContent = d.id ? 'Edit event' : 'New event'
+  h3.textContent = d.id ? 'עריכת אירוע' : 'אירוע חדש'
   sheet.append(h3)
 
   const titleLbl = h('label', 'lbl')
-  titleLbl.textContent = 'Title (optional)'
+  titleLbl.textContent = 'כותרת (אופציונלי)'
+  const titleRow = h('div', 'fieldRow')
   const titleIn = document.createElement('input')
   titleIn.className = 'input'
   titleIn.type = 'text'
-  titleIn.placeholder = 'Short label'
+  titleIn.placeholder = 'תווית קצרה'
   titleIn.value = d.title
   titleIn.addEventListener('input', () => {
     d.title = titleIn.value
   })
-  sheet.append(titleLbl, titleIn)
+  titleRow.append(titleIn)
+  if (speechAvailable()) {
+    titleRow.append(micBtn('הוספת כותרת בקול', () => startVoice('title', true)))
+  }
+  sheet.append(titleLbl, titleRow)
 
-  const voiceTitle = h('div', 'voiceRow')
   if (!speechAvailable()) {
     const w = h('p', 'warn')
     w.textContent =
-      'Voice input works best in Chrome or Edge (Chromium). Hebrew availability depends on the browser/OS.'
-    voiceTitle.append(w)
-  } else {
-    voiceTitle.append(
-      btn('Title — append (Hebrew)', 'btn secondary', () => startVoice('title', true)),
-      btn('Title — replace', 'btn secondary', () => startVoice('title', false)),
-    )
+      'קלט קולי עובד הכי טוב ב-Chrome או Edge. זמינות עברית תלויה בדפדפן ובמערכת.'
+    sheet.append(w)
   }
-  sheet.append(voiceTitle)
 
   const descLbl = h('label', 'lbl')
-  descLbl.textContent = 'Description'
+  descLbl.textContent = 'תיאור'
+  const descRow = h('div', 'fieldRow')
   const desc = document.createElement('textarea')
   desc.className = 'textarea'
-  desc.placeholder = 'What is this event?'
+  desc.placeholder = 'מהות האירוע'
   desc.rows = 6
   desc.value = d.description
   desc.addEventListener('input', () => {
     d.description = desc.value
   })
-  sheet.append(descLbl, desc)
-
-  const voiceDesc = h('div', 'voiceRow')
+  descRow.append(desc)
   if (speechAvailable()) {
-    voiceDesc.append(
-      btn('Description — append (Hebrew)', 'btn secondary', () => startVoice('description', true)),
-      btn('Description — replace', 'btn secondary', () => startVoice('description', false)),
-    )
+    descRow.append(micBtn('הוספת תיאור בקול', () => startVoice('description', true)))
   }
+  sheet.append(descLbl, descRow)
+
   if (state.voiceStatus) {
     const vs = h('p', 'voiceStatus')
     vs.textContent = state.voiceStatus
-    voiceDesc.append(vs)
+    sheet.append(vs)
   }
-  sheet.append(voiceDesc)
-
-  const sLbl = h('label', 'lbl')
-  sLbl.textContent = 'Start'
-  const sIn = document.createElement('input')
-  sIn.className = 'input'
-  sIn.type = 'datetime-local'
-  sIn.value = d.startLocal
-  sIn.addEventListener('change', () => {
-    d.startLocal = sIn.value
-  })
-  sheet.append(sLbl, sIn)
-
-  const eLbl = h('label', 'lbl')
-  eLbl.textContent = 'End'
-  const eIn = document.createElement('input')
-  eIn.className = 'input'
-  eIn.type = 'datetime-local'
-  eIn.value = d.endLocal
-  eIn.addEventListener('change', () => {
-    d.endLocal = eIn.value
-  })
-  sheet.append(eLbl, eIn)
 
   const actions = h('div', 'actions')
-  actions.append(btn('Cancel', 'btn ghost', () => closeEditor()))
-  if (d.id) actions.append(btn('Delete', 'btn danger', () => void deleteDraft()))
-  actions.append(btn('Save', 'btn primary', () => void saveDraft()))
+  actions.append(btn('ביטול', 'btn ghost', () => closeEditor()))
+  if (d.id) actions.append(btn('מחיקה', 'btn danger', () => void deleteDraft()))
+  actions.append(btn('שמירה', 'btn primary', () => void saveDraft()))
   sheet.append(actions)
 
   backdrop.addEventListener('click', (e) => {
@@ -395,10 +353,10 @@ function renderEditor(): HTMLElement {
 function renderUnconfigured(root: HTMLElement): void {
   const wrap = h('div', 'authCard')
   const t = h('h1', 'authTitle')
-  t.textContent = 'Voice Calendar'
+  t.textContent = 'לוח שנה קולי'
   const p = h('p', 'authBlurb')
   p.textContent =
-    'Cloud database is not configured. Add Supabase URL and anon key at build time (see SUPABASE.md in the repository), or use .env.local for local dev.'
+    'מסד הנתונים בענן לא הוגדר. הוסף כתובת Supabase ומפתח anon בזמן הבנייה (ראה SUPABASE.md), או השתמש ב-.env.local לפיתוח מקומי.'
   wrap.append(t, p)
   root.append(wrap)
 }
@@ -406,17 +364,18 @@ function renderUnconfigured(root: HTMLElement): void {
 function renderAuth(root: HTMLElement): void {
   const wrap = h('div', 'authCard')
   const t = h('h1', 'authTitle')
-  t.textContent = 'Voice Calendar'
+  t.textContent = 'לוח שנה קולי'
   const p = h('p', 'authBlurb')
-  p.textContent = 'Sign in with your email. We send a magic link — no password to remember.'
+  p.textContent = 'התחברות באימייל. נשלח קישור קסם — בלי סיסמה.'
   const email = document.createElement('input')
   email.type = 'email'
   email.className = 'input authInput'
   email.placeholder = 'you@example.com'
   email.autocomplete = 'email'
+  email.dir = 'ltr'
   const row = h('div', 'authRow')
   row.append(
-    btn('Send magic link', 'btn primary', () => {
+    btn('שליחת קישור התחברות', 'btn primary', () => {
       void sendMagicLink(email.value)
     }),
   )
@@ -429,16 +388,15 @@ function renderCalendarApp(root: HTMLElement): void {
   const header = h('header', 'top')
   const titleRow = h('div', 'titleRow')
   const title = h('h1', 'title')
-  title.textContent = 'Voice Calendar'
+  title.textContent = 'לוח שנה קולי'
   titleRow.append(title)
   const who = h('span', 'signedInAs')
-  const em = state.session?.user?.email ?? 'Signed in'
+  const em = state.session?.user?.email ?? 'מחובר'
   who.textContent = em
+  who.dir = 'ltr'
   titleRow.append(who)
-  const out = btn('Sign out', 'btn ghost smallBtn', () => void signOut())
+  const out = btn('יציאה', 'btn ghost smallBtn', () => void signOut())
   titleRow.append(out)
-  const imp = btn('Import from this browser', 'btn secondary smallBtn', () => void importFromBrowser())
-  titleRow.append(imp)
   header.append(titleRow)
 
   const monthNav = h('div', 'monthNav')
@@ -460,7 +418,7 @@ function renderCalendarApp(root: HTMLElement): void {
   header.append(monthNav)
   shell.append(header)
 
-  const todayBtn = btn('Today', 'todayBtn', () => {
+  const todayBtn = btn('היום', 'todayBtn', () => {
     const n = new Date()
     state.viewMonth = startOfMonth(n)
     state.selected = stripTime(n)
@@ -508,24 +466,22 @@ function renderCalendarApp(root: HTMLElement): void {
   const dayEvents = eventsForDay(state.selected)
   if (dayEvents.length === 0) {
     const p = h('p', 'muted')
-    p.textContent = 'No events on this day'
+    p.textContent = 'אין אירועים ביום זה'
     shell.append(p)
   } else {
     const list = h('div', 'evList')
     for (const ev of dayEvents) {
       const card = btn('', 'evCard', () => openEdit(ev))
       const body = h('div', 'evTitle')
-      body.textContent = ev.title.trim() || ev.description.trim() || 'No details'
-      const time = h('div', 'evTime')
-      time.textContent = `${formatHm(ev.start)} – ${formatHm(ev.end)}`
-      card.append(body, time)
+      body.textContent = ev.title.trim() || ev.description.trim() || 'ללא פרטים'
+      card.append(body)
       list.append(card)
     }
     shell.append(list)
   }
 
   const fab = btn('+', 'fab', () => openCreate())
-  fab.setAttribute('aria-label', 'Add event')
+  fab.setAttribute('aria-label', 'הוספת אירוע')
   shell.append(fab)
 
   if (state.editorOpen && state.draft) {
@@ -538,7 +494,7 @@ function renderCalendarApp(root: HTMLElement): void {
 function renderLoading(root: HTMLElement): void {
   const wrap = h('div', 'authCard')
   const p = h('p', 'authBlurb')
-  p.textContent = 'Loading…'
+  p.textContent = 'טוען…'
   root.append(wrap)
 }
 

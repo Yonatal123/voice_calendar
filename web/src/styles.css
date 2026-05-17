@@ -176,7 +176,7 @@ body {
 }
 
 .evCard {
-  text-align: left;
+  text-align: start;
   width: 100%;
   border-radius: var(--radius);
   border: 1px solid var(--surface2);
@@ -209,7 +209,7 @@ body {
 
 .fab {
   position: fixed;
-  right: max(16px, env(safe-area-inset-right));
+  inset-inline-end: max(16px, env(safe-area-inset-right));
   bottom: calc(16px + var(--safe-bottom));
   width: 56px;
   height: 56px;
@@ -339,7 +339,36 @@ body {
 .btn.danger {
   background: #7f1d1d;
   color: #fecaca;
-  margin-right: auto;
+  margin-inline-end: auto;
+}
+
+.micBtn {
+  min-width: 44px;
+  width: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.micBtn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.fieldRow .input,
+.fieldRow .textarea {
+  flex: 1;
+  min-width: 0;
 }
 
 .titleRow {
