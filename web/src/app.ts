@@ -1,7 +1,7 @@
-import type { Session } from '@supabase/supabase-js'
+import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import type { CalendarEvent } from './types'
 import { fetchRemoteEvents, upsertRemoteEvent, deleteRemoteEvent } from './remote-events'
-import { getSupabase, isRemoteConfigured } from './supabase'
+import { getSupabase, isRemoteConfigured, readCachedAuthSession } from './supabase'
 import {
   calendarCells,
   endOfDay,
@@ -74,6 +74,15 @@ function eventsForDay(day: Date): CalendarEvent[] {
 async function refreshRemoteEvents(): Promise<void> {
   const sb = getSupabase()
   state.events = await fetchRemoteEvents(sb)
+}
+
+async function loadEventsInBackground(sb: SupabaseClient): Promise<void> {
+  try {
+    state.events = await fetchRemoteEvents(sb)
+    render()
+  } catch {
+    // Token may still be refreshing after a slow network/DNS start; TOKEN_REFRESHED retries.
+  }
 }
 
 function openCreate(): void {
@@ -525,27 +534,23 @@ export async function init(): Promise<void> {
     return
   }
 
-  state.phase = 'loading'
-  render()
-
   const sb = getSupabase()
-
-  const { data: sessionData } = await sb.auth.getSession()
-  state.session = sessionData.session
-  if (state.session) {
-    try {
-      state.events = await fetchRemoteEvents(sb)
-    } catch {
-      state.events = []
-    }
-    state.phase = 'app'
-  } else {
-    state.phase = 'auth'
-  }
-  render()
+  const cached = readCachedAuthSession()
 
   sb.auth.onAuthStateChange(async (event, sess) => {
-    if (event === 'INITIAL_SESSION') return
+    if (event === 'INITIAL_SESSION') {
+      if (!cached && sess) {
+        state.session = sess
+        try {
+          state.events = await fetchRemoteEvents(sb)
+        } catch {
+          state.events = []
+        }
+        state.phase = 'app'
+        render()
+      }
+      return
+    }
 
     state.session = sess
 
@@ -566,6 +571,47 @@ export async function init(): Promise<void> {
       }
       state.phase = 'app'
       render()
+      return
+    }
+
+    if (event === 'TOKEN_REFRESHED' && sess && state.phase === 'app') {
+      try {
+        state.events = await fetchRemoteEvents(sb)
+      } catch {
+        /* keep existing events */
+      }
+      render()
     }
   })
+
+  if (cached) {
+    state.session = cached
+    state.phase = 'app'
+    render()
+    void loadEventsInBackground(sb)
+    void sb.auth.getSession()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        void sb.auth.getSession()
+      })
+    }
+    return
+  }
+
+  state.phase = 'loading'
+  render()
+
+  const { data: sessionData } = await sb.auth.getSession()
+  state.session = sessionData.session
+  if (state.session) {
+    try {
+      state.events = await fetchRemoteEvents(sb)
+    } catch {
+      state.events = []
+    }
+    state.phase = 'app'
+  } else {
+    state.phase = 'auth'
+  }
+  render()
 }
