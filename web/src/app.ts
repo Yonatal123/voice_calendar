@@ -124,6 +124,21 @@ function closeEditor(): void {
   render()
 }
 
+function sessionUserId(): string | undefined {
+  const session = state.session
+  if (!session) return undefined
+  try {
+    return session.user?.id
+  } catch {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]!)) as { sub?: string }
+      return payload.sub
+    } catch {
+      return undefined
+    }
+  }
+}
+
 async function saveDraft(): Promise<void> {
   const d = state.draft
   if (!d) return
@@ -140,10 +155,19 @@ async function saveDraft(): Promise<void> {
     return
   }
 
+  const uid = sessionUserId()
+  if (!uid) {
+    alert('לא מחובר.')
+    return
+  }
+
   let saved: CalendarEvent
   if (d.id) {
     const i = state.events.findIndex((e) => e.id === d.id)
-    if (i < 0) return
+    if (i < 0) {
+      closeEditor()
+      return
+    }
     saved = {
       ...state.events[i]!,
       title,
@@ -163,23 +187,20 @@ async function saveDraft(): Promise<void> {
     state.events.push(saved)
   }
 
-  const uid = state.session?.user?.id
-  if (!uid) {
-    alert('לא מחובר.')
-    return
-  }
+  closeEditor()
   try {
     await upsertRemoteEvent(getSupabase(), uid, saved)
+    await refreshRemoteEvents()
+    render()
   } catch (e) {
     try {
       await refreshRemoteEvents()
+      render()
     } catch {
       /* ignore */
     }
     alert(e instanceof Error ? e.message : 'לא ניתן לשמור בשרת.')
-    return
   }
-  closeEditor()
 }
 
 async function deleteDraft(): Promise<void> {
@@ -188,18 +209,20 @@ async function deleteDraft(): Promise<void> {
   if (!confirm('למחוק את האירוע?')) return
   const id = d.id
   state.events = state.events.filter((e) => e.id !== id)
+  closeEditor()
   try {
     await deleteRemoteEvent(getSupabase(), id)
+    await refreshRemoteEvents()
+    render()
   } catch (e) {
     try {
       await refreshRemoteEvents()
+      render()
     } catch {
       /* ignore */
     }
     alert(e instanceof Error ? e.message : 'לא ניתן למחוק בשרת.')
-    return
   }
-  closeEditor()
 }
 
 async function signOut(): Promise<void> {
